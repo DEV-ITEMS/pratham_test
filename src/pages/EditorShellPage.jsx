@@ -7,6 +7,8 @@ import {
   Box,
   Button,
   Chip,
+  Breadcrumbs,
+  Link as MUILink,
   Divider,
   List,
   ListItemButton,
@@ -15,19 +17,27 @@ import {
   Paper,
   Select,
   Stack,
+  Skeleton,
   Typography,
+  Snackbar,
+  CircularProgress,
 } from '@mui/material';
+import NavigateNextIcon from '@mui/icons-material/NavigateNext';
+import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { formatDistanceToNow } from 'date-fns';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useAuth } from '../features/auth/useAuth';
 import { ShareSettingsPanel } from '../features/sharing/ShareSettingsPanel';
+import { ShareDialog } from '../features/sharing/ShareDialog';
 import { UploadPanoramaDialog } from '../features/uploads/UploadPanoramaDialog';
 import { PanoramaViewer } from '../features/viewer360/PanoramaViewer';
+import { ViewThumbnails } from '../features/viewer360/ViewThumbnails';
 import { apiClient } from '../lib/apiClient';
 import { createWatermarkedSnapshot, triggerDownload } from '../lib/utils/snapshot';
 import { formatYawPitch } from '../lib/utils/yawPitch';
+import { ConfirmDialog } from '../components/ConfirmDialog';
 
 const Pane = ({ children, title }) => (
   <Paper sx={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }} elevation={0}>
@@ -53,6 +63,10 @@ const EditorShellPage = () => {
   const [uploadedAssetsById, setUploadedAssetsById] = useState({});
   const [uploadedViewsByRoomId, setUploadedViewsByRoomId] = useState({});
   const [blobUrls, setBlobUrls] = useState([]);
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', action: null });
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const [deletedRoomIds, setDeletedRoomIds] = useState([]);
+  const [snapshotting, setSnapshotting] = useState(false);
   useEffect(() => {
     return () => {
       blobUrls.forEach((u) => {
@@ -107,9 +121,21 @@ const EditorShellPage = () => {
     setSelectedViewId(selection.viewId);
   }, [initialSelectionQuery.data]);
 
+  const filteredBuildings = useMemo(() => {
+    const data = hierarchyQuery.data;
+    if (!data) return [];
+    return data.buildings.map((b) => ({
+      ...b,
+      flats: b.flats.map((f) => ({
+        ...f,
+        rooms: f.rooms.filter((r) => !deletedRoomIds.includes(r.id)),
+      })),
+    }));
+  }, [hierarchyQuery.data, deletedRoomIds]);
+
   const currentBuilding = useMemo(
-    () => hierarchyQuery.data?.buildings.find((item) => item.id === selectedBuildingId) ?? null,
-    [hierarchyQuery.data?.buildings, selectedBuildingId],
+    () => filteredBuildings.find((item) => item.id === selectedBuildingId) ?? null,
+    [filteredBuildings, selectedBuildingId],
   );
 
   const currentFlat = useMemo(
@@ -173,6 +199,7 @@ const EditorShellPage = () => {
 
   const handleSnapshot = async () => {
     if (!project) return;
+    setSnapshotting(true);
     const canvas = viewerRef.current?.captureSnapshot();
     if (!canvas) return;
     const watermark = `${org?.name ?? 'Demo Interiors'} - ${project.name}`;
@@ -180,6 +207,8 @@ const EditorShellPage = () => {
     triggerDownload(dataUrl, `${project.slug}-snapshot.png`);
     await apiClient.recordSnapshot(project.id);
     void analyticsQuery.refetch();
+    setSnackbar({ open: true, message: 'Snapshot saved to your device', action: null });
+    setSnapshotting(false);
   };
 
   if (projectQuery.isError) {
@@ -187,17 +216,31 @@ const EditorShellPage = () => {
   }
 
   if (!project && projectQuery.isLoading) {
-    return <Typography>Loading project...</Typography>;
+    return (
+      <Stack spacing={2}>
+        <Skeleton variant='text' width={280} height={40} />
+        <Skeleton variant='rounded' height={320} />
+      </Stack>
+    );
   }
 
   if (!project) {
     return <Alert severity='warning'>Project not found. Try another link from the dashboard.</Alert>;
   }
 
-  const hierarchy = hierarchyQuery.data;
+  const hierarchy = hierarchyQuery.data ? { buildings: filteredBuildings } : undefined;
 
   return (
     <Stack spacing={3} sx={{ height: 'calc(100vh - 120px)' }}>
+      <Breadcrumbs separator={<NavigateNextIcon fontSize='small' />} aria-label='Hierarchy breadcrumbs'>
+        <MUILink component={Link} underline='hover' color='inherit' to={`/editor/${project.slug}`}>
+          {project.name}
+        </MUILink>
+        {currentBuilding && <Typography color='text.primary'>{currentBuilding.name}</Typography>}
+        {currentFlat && <Typography color='text.primary'>{currentFlat.name}</Typography>}
+        {currentRoom && <Typography color='text.primary'>{currentRoom.name}</Typography>}
+        {currentView && <Typography color='text.primary'>{currentView.name}</Typography>}
+      </Breadcrumbs>
       <Stack direction='row' justifyContent='space-between' alignItems='center'>
         <Stack spacing={0.5}>
           <Typography variant='h4'>{project.name}</Typography>
@@ -210,11 +253,44 @@ const EditorShellPage = () => {
           </Stack>
         </Stack>
         <Stack direction='row' spacing={2}>
+          {sharingQuery.data && project && (
+            <ShareDialog
+              project={project}
+              share={sharingQuery.data}
+              onChange={async (payload) => {
+                const prev = sharingQuery.data;
+                await apiClient.updateSharing(project.id, payload);
+                void sharingQuery.refetch();
+                setSnackbar({
+                  open: true,
+                  message: 'Sharing settings updated',
+                  action: (
+                    <Button
+                      color='inherit'
+                      size='small'
+                      onClick={async () => {
+                        await apiClient.updateSharing(project.id, { restriction: prev.restriction });
+                        void sharingQuery.refetch();
+                        setSnackbar({ open: true, message: 'Reverted sharing change', action: null });
+                      }}
+                    >
+                      Undo
+                    </Button>
+                  ),
+                });
+              }}
+            />
+          )}
           <Button variant='outlined' startIcon={<UploadIcon />} onClick={() => setUploadOpen(true)}>
             Upload Panorama
           </Button>
-          <Button variant='contained' startIcon={<CameraAltIcon />} onClick={handleSnapshot}>
-            Snapshot
+          <Button
+            variant='contained'
+            startIcon={snapshotting ? <CircularProgress size={18} /> : <CameraAltIcon />}
+            onClick={handleSnapshot}
+            disabled={snapshotting}
+          >
+            {snapshotting ? 'Saving...' : 'Snapshot'}
           </Button>
         </Stack>
       </Stack>
@@ -259,9 +335,14 @@ const EditorShellPage = () => {
               ))}
             </Stack>
           ) : (
-            <Typography variant='body2' color='text.secondary'>
-              Loading the project hierarchy.
-            </Typography>
+            <Stack spacing={2}>
+              <Skeleton variant='text' width={160} />
+              <Stack spacing={1}>
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <Skeleton key={i} variant='rounded' height={36} />
+                ))}
+              </Stack>
+            </Stack>
           )}
         </Pane>
         <Pane title='Viewer'>
@@ -296,11 +377,19 @@ const EditorShellPage = () => {
                   onPositionChange={setOrientation}
                 />
               </Box>
+              <ViewThumbnails
+                views={roomViews}
+                selectedViewId={selectedViewId}
+                onSelect={(id) => setSelectedViewId(id)}
+              />
             </Stack>
           ) : (
-            <Typography variant='body2' color='text.secondary'>
-              {currentRoom ? 'Loading panorama asset.' : 'Select a room to start exploring its panoramas.'}
-            </Typography>
+            <Stack spacing={1}>
+              <Skeleton variant='rounded' height={220} />
+              <Typography variant='body2' color='text.secondary'>
+                {currentRoom ? 'Loading panorama asset.' : 'Select a room to start exploring its panoramas.'}
+              </Typography>
+            </Stack>
           )}
         </Pane>
         <Pane title='Details'>
@@ -314,6 +403,14 @@ const EditorShellPage = () => {
                   </Typography>
                 )}
               </Stack>
+              <Button
+                variant='outlined'
+                color='error'
+                onClick={() => setConfirmDeleteOpen(true)}
+                sx={{ alignSelf: 'flex-start' }}
+              >
+                Delete Room
+              </Button>
               <Divider />
               <Stack spacing={1}>
                 <Typography variant='subtitle2'>Pins</Typography>
@@ -336,8 +433,26 @@ const EditorShellPage = () => {
                   project={project}
                   share={sharingQuery.data}
                   onChange={async (payload) => {
+                    const prev = sharingQuery.data;
                     await apiClient.updateSharing(project.id, payload);
                     void sharingQuery.refetch();
+                    setSnackbar({
+                      open: true,
+                      message: 'Sharing settings updated',
+                      action: (
+                        <Button
+                          color='inherit'
+                          size='small'
+                          onClick={async () => {
+                            await apiClient.updateSharing(project.id, { restriction: prev.restriction });
+                            void sharingQuery.refetch();
+                            setSnackbar({ open: true, message: 'Reverted sharing change', action: null });
+                          }}
+                        >
+                          Undo
+                        </Button>
+                      ),
+                    });
                   }}
                 />
               )}
@@ -382,11 +497,48 @@ const EditorShellPage = () => {
           } else {
             viewerRef.current?.loadPanorama(asset.url);
           }
+          setSnackbar({ open: true, message: 'Panorama uploaded', action: null });
         }}
+      />
+      <ConfirmDialog
+        open={confirmDeleteOpen}
+        title='Delete room?'
+        description='This removes the room from the project view. You can undo this action from the snackbar.'
+        confirmLabel='Delete'
+        onConfirm={() => {
+          setConfirmDeleteOpen(false);
+          if (!currentRoom) return;
+          const deletedId = currentRoom.id;
+          setDeletedRoomIds((prev) => [...prev, deletedId]);
+          // Move selection to first remaining room
+          const nextRoom = currentFlat?.rooms.find((r) => r.id !== deletedId);
+          setSelectedRoomId(nextRoom?.id ?? null);
+          setSelectedViewId(nextRoom?.views?.[0]?.id ?? null);
+          setSnackbar({
+            open: true,
+            message: 'Room deleted',
+            action: (
+              <Button
+                color='inherit'
+                size='small'
+                onClick={() => setDeletedRoomIds((prev) => prev.filter((id) => id !== deletedId))}
+              >
+                Undo
+              </Button>
+            ),
+          });
+        }}
+        onCancel={() => setConfirmDeleteOpen(false)}
+      />
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={4000}
+        onClose={() => setSnackbar((s) => ({ ...s, open: false }))}
+        message={snackbar.message}
+        action={snackbar.action}
       />
     </Stack>
   );
 };
 
 export default EditorShellPage;
-

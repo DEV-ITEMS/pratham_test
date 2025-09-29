@@ -9,6 +9,7 @@ import EditorShellPage from '../pages/EditorShellPage';
 import NotFoundPage from '../pages/NotFoundPage';
 import { PortfolioLanding } from '../features/portfolio/PortfolioLanding';
 import { PublicProjectViewer } from '../features/viewer360/PublicProjectViewer';
+import { AppBreadcrumbs } from '../components/AppBreadcrumbs';
 
 const AppLayout = () => {
   const [drawerOpen, setDrawerOpen] = useState(true);
@@ -27,6 +28,7 @@ const AppLayout = () => {
         }}
       >
         <Toolbar />
+        <AppBreadcrumbs />
         <Outlet />
       </Box>
     </Box>
