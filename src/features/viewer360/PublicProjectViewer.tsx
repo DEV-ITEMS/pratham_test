@@ -1,0 +1,162 @@
+﻿import { Box, Button, Chip, Container, Divider, Stack, Typography } from '@mui/material';
+import { useQuery } from '@tanstack/react-query';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { useParams } from 'react-router-dom';
+import { PanoramaViewer, PanoramaViewerHandle } from './PanoramaViewer';
+import { apiClient } from '../../lib/apiClient';
+import { Room, RoomPin, RoomView, YawPitch } from '../../lib/types';
+import { formatYawPitch } from '../../lib/utils/yawPitch';
+
+export const PublicProjectViewer = () => {
+  const { projectSlug = '' } = useParams();
+  const viewerRef = useRef<PanoramaViewerHandle | null>(null);
+  const [selectedRoomId, setSelectedRoomId] = useState<string | null>(null);
+  const [selectedViewId, setSelectedViewId] = useState<string | null>(null);
+  const [orientation, setOrientation] = useState<YawPitch>({ yaw: 0, pitch: 0 });
+
+  const projectQuery = useQuery({
+    queryKey: ['public-project', projectSlug],
+    queryFn: () => apiClient.fetchPublicProject(projectSlug),
+  });
+
+  const project = projectQuery.data;
+
+  const hierarchyQuery = useQuery({
+    queryKey: ['public-hierarchy', project?.id],
+    queryFn: () => (project ? apiClient.fetchProjectHierarchy(project.id) : Promise.resolve(undefined)),
+    enabled: Boolean(project?.id),
+  });
+
+  useEffect(() => {
+    const hierarchy = hierarchyQuery.data;
+    if (!hierarchy) return;
+    const firstBuilding = hierarchy.buildings[0];
+    const firstFlat = firstBuilding?.flats[0];
+    const firstRoom = firstFlat?.rooms[0];
+    const firstView = firstRoom?.views[0];
+    setSelectedRoomId((prev) => prev ?? firstRoom?.id ?? null);
+    setSelectedViewId((prev) => prev ?? firstView?.id ?? null);
+  }, [hierarchyQuery.data]);
+
+  const rooms: Array<Room & { views: RoomView[] }> = useMemo(() => {
+    const hierarchy = hierarchyQuery.data;
+    if (!hierarchy) return [];
+    return hierarchy.buildings.flatMap((building) =>
+      building.flats.flatMap((flat) => flat.rooms as Array<Room & { views: RoomView[] }>),
+    );
+  }, [hierarchyQuery.data]);
+
+  const currentRoom = rooms.find((room) => room.id === selectedRoomId) ?? rooms[0];
+  const currentView = currentRoom?.views.find((view) => view.id === selectedViewId) ?? currentRoom?.views[0];
+
+  useEffect(() => {
+    if (currentRoom && !currentRoom.views.some((view) => view.id === selectedViewId)) {
+      setSelectedViewId(currentRoom.views[0]?.id ?? null);
+    }
+  }, [currentRoom, selectedViewId]);
+
+  const pinsQuery = useQuery({
+    queryKey: ['public-pins', currentView?.id],
+    queryFn: () => (currentView ? apiClient.fetchPinsForView(currentView.id) : Promise.resolve<RoomPin[]>([])),
+    enabled: Boolean(currentView?.id),
+  });
+
+  const assetQuery = useQuery({
+    queryKey: ['public-asset', currentView?.panoramaAssetId],
+    queryFn: () => (currentView ? apiClient.fetchPanoramaAsset(currentView.panoramaAssetId) : Promise.resolve(undefined)),
+    enabled: Boolean(currentView?.panoramaAssetId),
+  });
+
+  const handlePinNavigate = (pin: RoomPin) => {
+    setSelectedRoomId(pin.targetRoomId);
+    setSelectedViewId(pin.targetViewId ?? null);
+  };
+
+  if (!project) {
+    return (
+      <Box sx={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <Typography variant='body1'>Loading public project…</Typography>
+      </Box>
+    );
+  }
+
+  return (
+    <Box sx={{ bgcolor: 'background.default', minHeight: '100vh', py: 8 }}>
+      <Container maxWidth='lg'>
+        <Stack spacing={3} sx={{ mb: 4 }}>
+          <Stack spacing={1}>
+            <Typography variant='subtitle2' color='primary'>
+              Public View
+            </Typography>
+            <Typography variant='h3'>{project.name}</Typography>
+            <Typography variant='body1' color='text.secondary'>
+              Explore interactive rooms and jump between scenes using the in-view pins.
+            </Typography>
+            <Stack direction='row' spacing={1}>
+              <Chip size='small' label={`Visibility: ${project.visibility}`} />
+              {project.portfolio && <Chip size='small' color='primary' label='Portfolio' />}
+              {currentRoom && <Chip size='small' label={`Room: ${currentRoom.name}`} />}
+              <Chip size='small' label={`Orientation: ${formatYawPitch(orientation)}`} />
+            </Stack>
+          </Stack>
+          <Box
+            sx={{
+              display: 'grid',
+              gap: 3,
+              gridTemplateColumns: { xs: '1fr', md: '320px minmax(0, 1fr)' },
+              alignItems: 'start',
+            }}
+          >
+            <Stack spacing={1}>
+              <Typography variant='subtitle2'>Rooms</Typography>
+              <Stack spacing={1}>
+                {rooms.map((room) => (
+                  <Button
+                    key={room.id}
+                    variant={room.id === currentRoom?.id ? 'contained' : 'outlined'}
+                    onClick={() => {
+                      setSelectedRoomId(room.id);
+                      setSelectedViewId(room.views[0]?.id ?? null);
+                    }}
+                  >
+                    {room.name}
+                  </Button>
+                ))}
+              </Stack>
+              <Divider />
+              <Typography variant='subtitle2'>Pins</Typography>
+              <Stack spacing={1}>
+                {(pinsQuery.data ?? []).map((pin) => (
+                  <Button key={pin.id} variant='outlined' size='small' onClick={() => handlePinNavigate(pin)}>
+                    {pin.label}
+                  </Button>
+                ))}
+                {pinsQuery.data?.length === 0 && <Typography variant='body2'>No pins available.</Typography>}
+              </Stack>
+            </Stack>
+            <Box>
+              {currentView && assetQuery.data ? (
+                <Box sx={{ height: { xs: 360, md: 560 } }}>
+                  <PanoramaViewer
+                    ref={viewerRef}
+                    view={currentView}
+                    panoramaUrl={assetQuery.data.url}
+                    pins={pinsQuery.data ?? []}
+                    onPinClick={handlePinNavigate}
+                    onPositionChange={setOrientation}
+                  />
+                </Box>
+              ) : (
+                <Box sx={{ height: 560, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Typography variant='body1' color='text.secondary'>
+                    Loading panorama…
+                  </Typography>
+                </Box>
+              )}
+            </Box>
+          </Box>
+        </Stack>
+      </Container>
+    </Box>
+  );
+};
