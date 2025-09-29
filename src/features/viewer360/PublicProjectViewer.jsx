@@ -1,5 +1,4 @@
-import { Box, Breadcrumbs, Button, Chip, Container, Divider, Skeleton, Stack, ToggleButton, Tooltip, Typography } from '@mui/material';
-import NavigateNextIcon from '@mui/icons-material/NavigateNext';
+import { Box, Button, Chip, Container, Divider, Skeleton, Stack, ToggleButton, Tooltip, Typography } from '@mui/material';
 import SlideshowIcon from '@mui/icons-material/Slideshow';
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -84,18 +83,12 @@ export const PublicProjectViewer = () => {
     <Box sx={{ bgcolor: 'background.default' }}>
       <Container maxWidth='lg'>
         <Stack spacing={3} sx={{ mb: 4 }}>
-          <Stack spacing={1}>
-            <Breadcrumbs separator={<NavigateNextIcon fontSize='small' />} aria-label='breadcrumb'>
-              <Typography color='text.primary'>Public</Typography>
-              <Typography color='text.primary'>{project.name}</Typography>
-            </Breadcrumbs>
-          </Stack>
           <Stack spacing={1} direction='row' justifyContent='space-between' alignItems='center'>
             <Stack spacing={1}>
               <Typography variant='subtitle2' color='primary'>
                 Public View
               </Typography>
-              <Typography variant='h3'>{project.name}</Typography>
+              <Typography variant='h4'>{project.name}</Typography>
               <Typography variant='body1' color='text.secondary'>
                 Explore interactive rooms and jump between scenes using the in-view pins.
               </Typography>
@@ -122,7 +115,7 @@ export const PublicProjectViewer = () => {
               display: 'grid',
               gap: 3,
               gridTemplateColumns: presentation ? '1fr' : { xs: '1fr', md: '320px minmax(0, 1fr)' },
-              alignItems: 'start',
+              alignItems: 'stretch',
             }}
           >
             {!presentation && (

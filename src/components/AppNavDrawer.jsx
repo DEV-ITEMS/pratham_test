@@ -2,7 +2,9 @@ import DashboardIcon from '@mui/icons-material/Dashboard';
 import LayersIcon from '@mui/icons-material/Layers';
 import PublicIcon from '@mui/icons-material/Public';
 import WorkspacesIcon from '@mui/icons-material/Workspaces';
-import { Divider, Drawer, List, ListItemButton, ListItemIcon, ListItemText, Stack, Typography } from '@mui/material';
+import { Divider, Drawer, IconButton, List, ListItemButton, ListItemIcon, ListItemText, Stack, Typography, useMediaQuery, Toolbar } from '@mui/material';
+import CloseIcon from '@mui/icons-material/Close';
+import { useTheme } from '@mui/material/styles';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../features/auth/useAuth';
 
@@ -12,6 +14,8 @@ export const AppNavDrawer = ({ open, onClose }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { org, seatUsage } = useAuth();
+  const theme = useTheme();
+  const mdUp = useMediaQuery(theme.breakpoints.up('md'));
 
   const items = [
     { icon: <DashboardIcon />, label: 'Dashboard', path: '/dashboard' },
@@ -22,20 +26,33 @@ export const AppNavDrawer = ({ open, onClose }) => {
 
   return (
     <Drawer
-      variant="persistent"
+      variant={mdUp ? 'persistent' : 'temporary'}
       open={open}
       onClose={onClose}
+      ModalProps={{ keepMounted: true }}
       sx={{
         width: APP_NAV_WIDTH,
         flexShrink: 0,
         '& .MuiDrawer-paper': { width: APP_NAV_WIDTH, boxSizing: 'border-box', borderRight: 0 },
       }}
     >
+      {/* Offset for the fixed AppBar */}
+      <Toolbar />
       <Stack spacing={2} sx={{ p: 3 }}>
         <Typography variant="subtitle2" color="text.secondary">
           Workspace
         </Typography>
-        <Typography variant="h6">{org?.name}</Typography>
+        <Stack direction="row" alignItems="center" justifyContent="space-between">
+          <Typography variant="h6">{org?.name}</Typography>
+          <IconButton
+            aria-label="Close navigation"
+            onClick={onClose}
+            size="small"
+            sx={{ display: 'inline-flex' }}
+          >
+            <CloseIcon fontSize="small" />
+          </IconButton>
+        </Stack>
         {seatUsage && (
           <Typography variant="body2" color="text.secondary">
             Seats used {seatUsage.used}/{seatUsage.used + seatUsage.available}
@@ -61,4 +78,3 @@ export const AppNavDrawer = ({ open, onClose }) => {
     </Drawer>
   );
 };
-

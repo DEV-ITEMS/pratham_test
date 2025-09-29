@@ -1,6 +1,4 @@
-import { Box, Breadcrumbs, Container, Link as MUILink, Skeleton, Stack, Typography } from '@mui/material';
-import NavigateNextIcon from '@mui/icons-material/NavigateNext';
-import { Link } from 'react-router-dom';
+import { Box, Container, Skeleton, Stack, Typography } from '@mui/material';
 import { useQuery } from '@tanstack/react-query';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ProjectCard } from '../projects/ProjectCard';
@@ -29,20 +27,10 @@ export const PortfolioLanding = () => {
   return (
     <Box sx={{ bgcolor: 'background.default' }}>
       <Container maxWidth='lg'>
-        <Stack spacing={2} textAlign='center' sx={{ mb: 6 }}>
-          <Breadcrumbs separator={<NavigateNextIcon fontSize='small' />} aria-label='breadcrumb' sx={{ justifyContent: 'center', display: 'flex' }}>
-            <MUILink component={Link} to='/dashboard' underline='hover' color='inherit'>Home</MUILink>
-            <Typography color='text.primary'>Portfolio</Typography>
-          </Breadcrumbs>
-          <Typography variant='subtitle2' color='primary'>
-            Portfolio
-          </Typography>
-          <Typography variant='h3'>
-            {orgQuery.data ? `${orgQuery.data.name} Showcase` : 'Loading portfolio'}
-          </Typography>
-          <Typography variant='body1' color='text.secondary'>
-            Explore publicly published interior design projects curated by the firm.
-          </Typography>
+        <Stack spacing={1.5} sx={{ mb: 3 }}>
+          <Typography variant='subtitle2' color='primary'>Portfolio</Typography>
+          <Typography variant='h4'>{orgQuery.data ? `${orgQuery.data.name} Showcase` : 'Loading portfolio'}</Typography>
+          <Typography variant='body1' color='text.secondary'>Explore publicly published interior design projects curated by the firm.</Typography>
         </Stack>
         <Box
           sx={{

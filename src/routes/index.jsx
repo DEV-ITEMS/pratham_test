@@ -13,19 +13,46 @@ import { PublicProjectViewer } from '../features/viewer360/PublicProjectViewer';
 import { AppBreadcrumbs } from '../components/AppBreadcrumbs';
 
 const AppLayout = () => {
-  const [drawerOpen, setDrawerOpen] = useState(true);
+  const [drawerOpen, setDrawerOpen] = useState(() => {
+    try {
+      return localStorage.getItem('drawerOpen') !== '0';
+    } catch {
+      return true;
+    }
+  });
+
+  const handleToggleDrawer = () =>
+    setDrawerOpen((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem('drawerOpen', next ? '1' : '0');
+      } catch {}
+      return next;
+    });
 
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: 'background.default' }}>
-      <AppTopBar onMenuToggle={() => setDrawerOpen((open) => !open)} />
-      <AppNavDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />
+      <AppTopBar onMenuToggle={handleToggleDrawer} />
+      <AppNavDrawer
+        open={drawerOpen}
+        onClose={() => {
+          try {
+            localStorage.setItem('drawerOpen', '0');
+          } catch {}
+          setDrawerOpen(false);
+        }}
+      />
       <Box
         component="main"
         sx={{
           flexGrow: 1,
-          p: 3,
+          // Keep a uniform page padding, but avoid extra gap next to the open drawer
+          pr: 3,
+          pb: 3,
+          pt: 3,
+          pl: { xs: 3, md: drawerOpen ? 0 : 3 },
           ml: { md: drawerOpen ? `${APP_NAV_WIDTH}px` : 0 },
-          transition: (theme) => theme.transitions.create('margin', { duration: theme.transitions.duration.short }),
+          transition: (theme) => theme.transitions.create(['margin', 'padding'], { duration: theme.transitions.duration.shorter }),
         }}
       >
         <Toolbar />
