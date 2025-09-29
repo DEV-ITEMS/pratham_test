@@ -27,7 +27,7 @@ export const PortfolioLanding = () => {
   });
 
   return (
-    <Box sx={{ bgcolor: 'background.default', minHeight: '100vh', py: 10 }}>
+    <Box sx={{ bgcolor: 'background.default' }}>
       <Container maxWidth='lg'>
         <Stack spacing={2} textAlign='center' sx={{ mb: 6 }}>
           <Breadcrumbs separator={<NavigateNextIcon fontSize='small' />} aria-label='breadcrumb' sx={{ justifyContent: 'center', display: 'flex' }}>

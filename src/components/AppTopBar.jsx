@@ -3,14 +3,16 @@ import NotificationsIcon from '@mui/icons-material/Notifications';
 import DarkModeIcon from '@mui/icons-material/DarkMode';
 import LightModeIcon from '@mui/icons-material/LightMode';
 import ContrastIcon from '@mui/icons-material/Contrast';
-import { AppBar, Avatar, Box, IconButton, Stack, Toolbar, Tooltip, Typography } from '@mui/material';
+import { AppBar, Avatar, Box, Button, IconButton, Stack, Toolbar, Tooltip, Typography } from '@mui/material';
 import { useAuth } from '../features/auth/useAuth';
 import { GlobalSearch } from './GlobalSearch';
 import { useThemeControls } from '../providers/ThemeProvider';
+import { useNavigate } from 'react-router-dom';
 
 export const AppTopBar = ({ onMenuToggle }) => {
-  const { user, org } = useAuth();
+  const { user, org, logout } = useAuth();
   const { mode, highContrast, toggleMode, toggleHighContrast } = useThemeControls();
+  const navigate = useNavigate();
 
   return (
     <AppBar position="fixed" color="inherit" elevation={1} sx={{ backdropFilter: 'blur(8px)' }}>
@@ -55,6 +57,11 @@ export const AppTopBar = ({ onMenuToggle }) => {
               </Typography>
             </Box>
             <Avatar src={user?.avatarUrl}>{user?.name?.[0]}</Avatar>
+            {user && (
+              <Button size="small" color="inherit" onClick={async () => { await logout(); navigate('/login'); }}>
+                Logout
+              </Button>
+            )}
           </Stack>
         </Stack>
       </Toolbar>
