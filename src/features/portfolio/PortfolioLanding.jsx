@@ -1,4 +1,6 @@
-import { Box, Container, Skeleton, Stack, Typography } from '@mui/material';
+import { Box, Breadcrumbs, Container, Link as MUILink, Skeleton, Stack, Typography } from '@mui/material';
+import NavigateNextIcon from '@mui/icons-material/NavigateNext';
+import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ProjectCard } from '../projects/ProjectCard';
@@ -28,6 +30,10 @@ export const PortfolioLanding = () => {
     <Box sx={{ bgcolor: 'background.default', minHeight: '100vh', py: 10 }}>
       <Container maxWidth='lg'>
         <Stack spacing={2} textAlign='center' sx={{ mb: 6 }}>
+          <Breadcrumbs separator={<NavigateNextIcon fontSize='small' />} aria-label='breadcrumb' sx={{ justifyContent: 'center', display: 'flex' }}>
+            <MUILink component={Link} to='/dashboard' underline='hover' color='inherit'>Home</MUILink>
+            <Typography color='text.primary'>Portfolio</Typography>
+          </Breadcrumbs>
           <Typography variant='subtitle2' color='primary'>
             Portfolio
           </Typography>

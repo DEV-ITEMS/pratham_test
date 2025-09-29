@@ -1,4 +1,5 @@
 import PlaceIcon from '@mui/icons-material/Place';
+import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import { Box, CircularProgress, IconButton, Tooltip } from '@mui/material';
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { Viewer } from 'photo-sphere-viewer';
@@ -14,6 +15,13 @@ export const PanoramaViewer = forwardRef(({ view, pins, panoramaUrl, onPinClick,
   const onPositionChangeRef = useRef(onPositionChange);
   const [ready, setReady] = useState(false);
   const [pinOverlays, setPinOverlays] = useState([]);
+  const [showHint, setShowHint] = useState(() => {
+    try {
+      return localStorage.getItem('viewerOnboarded') !== '1';
+    } catch {
+      return true;
+    }
+  });
 
   pinsRef.current = pins;
   onPositionChangeRef.current = onPositionChange;
@@ -111,6 +119,28 @@ export const PanoramaViewer = forwardRef(({ view, pins, panoramaUrl, onPinClick,
     };
   }, [updatePinOverlays]);
 
+  const handleKeyDown = useCallback((e) => {
+    const viewer = viewerRef.current;
+    if (!viewer) return;
+    const stepLong = 0.1; // radians
+    const stepLat = 0.05; // radians
+    const pos = viewer.getPosition?.() ?? {};
+    let { longitude = 0, latitude = 0 } = pos;
+    if (e.key === 'ArrowLeft') {
+      longitude -= stepLong;
+    } else if (e.key === 'ArrowRight') {
+      longitude += stepLong;
+    } else if (e.key === 'ArrowUp') {
+      latitude += stepLat;
+    } else if (e.key === 'ArrowDown') {
+      latitude -= stepLat;
+    } else {
+      return;
+    }
+    e.preventDefault();
+    viewer.animate({ longitude, latitude, speed: '5rpm' });
+  }, []);
+
   useEffect(() => {
     const viewer = viewerRef.current;
     if (!viewer) {
@@ -133,7 +163,14 @@ export const PanoramaViewer = forwardRef(({ view, pins, panoramaUrl, onPinClick,
 
   return (
     <Box sx={{ position: 'relative', width: '100%', height: '100%' }}>
-      <Box ref={containerRef} sx={{ width: '100%', height: '100%', borderRadius: 2, overflow: 'hidden' }} />
+      <Box
+        ref={containerRef}
+        sx={{ width: '100%', height: '100%', borderRadius: 2, overflow: 'hidden' }}
+        tabIndex={0}
+        role="application"
+        aria-label="360 degree panorama viewer"
+        onKeyDown={handleKeyDown}
+      />
       {!ready && (
         <Box
           sx={{
@@ -156,6 +193,7 @@ export const PanoramaViewer = forwardRef(({ view, pins, panoramaUrl, onPinClick,
                 size="small"
                 color="primary"
                 onClick={() => onPinClick(overlay.pin)}
+                aria-label={`Go to ${overlay.pin.label}`}
                 sx={{
                   position: 'absolute',
                   transform: 'translate(-50%, -50%)',
@@ -171,6 +209,28 @@ export const PanoramaViewer = forwardRef(({ view, pins, panoramaUrl, onPinClick,
             </Tooltip>
           ) : null,
         )}
+      {/* Onboarding hint */}
+      {showHint && (
+        <Tooltip
+          open
+          placement="right"
+          title="Drag to rotate. Scroll to zoom. Use arrow keys to look around."
+        >
+          <IconButton
+            aria-label="Viewer help"
+            size="small"
+            onClick={() => {
+              try {
+                localStorage.setItem('viewerOnboarded', '1');
+              } catch {}
+              setShowHint(false);
+            }}
+            sx={{ position: 'absolute', left: 8, bottom: 8, bgcolor: 'background.paper' }}
+          >
+            <HelpOutlineIcon fontSize="small" />
+          </IconButton>
+        </Tooltip>
+      )}
     </Box>
   );
 });
