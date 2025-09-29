@@ -81,7 +81,7 @@ export const PublicProjectViewer = () => {
   }
 
   return (
-    <Box sx={{ bgcolor: 'background.default', minHeight: '100vh', py: 8 }}>
+    <Box sx={{ bgcolor: 'background.default' }}>
       <Container maxWidth='lg'>
         <Stack spacing={3} sx={{ mb: 4 }}>
           <Stack spacing={1}>

@@ -7,6 +7,7 @@ import { ProtectedRoute } from './ProtectedRoute';
 import DashboardPage from '../pages/DashboardPage';
 import EditorShellPage from '../pages/EditorShellPage';
 import NotFoundPage from '../pages/NotFoundPage';
+import LoginPage from '../pages/LoginPage';
 import { PortfolioLanding } from '../features/portfolio/PortfolioLanding';
 import { PublicProjectViewer } from '../features/viewer360/PublicProjectViewer';
 import { AppBreadcrumbs } from '../components/AppBreadcrumbs';
@@ -38,6 +39,7 @@ const AppLayout = () => {
 export const AppRoutes = () => (
   <BrowserRouter>
     <Routes>
+      <Route path="/login" element={<LoginPage />} />
       <Route element={<AppLayout />}>
         <Route index element={<Navigate to="/editor/modern-flat-tour" replace />} />
         <Route
@@ -56,9 +58,9 @@ export const AppRoutes = () => (
             </ProtectedRoute>
           }
         />
+        <Route path="portfolio/:orgSlug" element={<PortfolioLanding />} />
+        <Route path="p/:projectSlug" element={<PublicProjectViewer />} />
       </Route>
-      <Route path="portfolio/:orgSlug" element={<PortfolioLanding />} />
-      <Route path="p/:projectSlug" element={<PublicProjectViewer />} />
       <Route path="*" element={<NotFoundPage />} />
     </Routes>
   </BrowserRouter>
