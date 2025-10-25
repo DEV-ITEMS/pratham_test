@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { BrowserRouter, Navigate, Outlet, Route, Routes } from 'react-router-dom';
 import { Box, Toolbar } from '@mui/material';
 import { AppTopBar } from '../components/AppTopBar';
-import { AppNavDrawer, APP_NAV_WIDTH } from '../components/AppNavDrawer';
+import { AppNavDrawer } from '../components/AppNavDrawer';
 import { ProtectedRoute } from './ProtectedRoute';
 import DashboardPage from '../pages/DashboardPage';
 import EditorShellPage from '../pages/EditorShellPage';
@@ -10,7 +10,7 @@ import NotFoundPage from '../pages/NotFoundPage';
 import LoginPage from '../pages/LoginPage';
 import { PortfolioLanding } from '../features/portfolio/PortfolioLanding';
 import { PublicProjectViewer } from '../features/viewer360/PublicProjectViewer';
-import { AppBreadcrumbs } from '../components/AppBreadcrumbs';
+import { spacing } from '../theme/spacing';
 
 const AppLayout = () => {
   const [drawerOpen, setDrawerOpen] = useState(() => {
@@ -46,17 +46,16 @@ const AppLayout = () => {
         component="main"
         sx={{
           flexGrow: 1,
-          // Keep a uniform page padding, but avoid extra gap next to the open drawer
-          pr: 3,
-          pb: 3,
-          pt: 3,
-          pl: { xs: 3, md: drawerOpen ? 0 : 3 },
-          ml: { md: drawerOpen ? `${APP_NAV_WIDTH}px` : 0 },
-          transition: (theme) => theme.transitions.create(['margin', 'padding'], { duration: theme.transitions.duration.shorter }),
+          display: 'flex',
+          flexDirection: 'column',
+          minHeight: '100vh',
+          bgcolor: 'background.default',
+          px: { xs: `${spacing.sm}px`, md: `${spacing.lg}px` },
+          py: { xs: `${spacing.md}px`, md: `${spacing.lg}px` },
+          transition: (theme) => theme.transitions.create(['padding'], { duration: theme.transitions.duration.shorter }),
         }}
       >
         <Toolbar />
-        <AppBreadcrumbs />
         <Outlet />
       </Box>
     </Box>

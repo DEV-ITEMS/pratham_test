@@ -13,10 +13,16 @@ export default [
   },
   {
     files: ['**/*.{js,jsx}'],
-    extends: [js.configs.recommended, prettier],
+    ...js.configs.recommended,
+    ...prettier,
     languageOptions: {
       ecmaVersion: 'latest',
       sourceType: 'module',
+      parserOptions: {
+        ecmaFeatures: {
+          jsx: true,
+        },
+      },
       globals: {
         ...globals.browser,
         ...globals.node,
@@ -36,6 +42,7 @@ export default [
       ...reactHooksRecommended.rules,
       'react/react-in-jsx-scope': 'off',
       'no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
+      'react/prop-types': 'off',
     },
   },
 ];

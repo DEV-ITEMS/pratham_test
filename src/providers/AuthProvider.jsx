@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { apiClient } from '../lib/apiClient';
 import { storage } from '../lib/utils/storage';
 
@@ -15,7 +15,7 @@ export const AuthProvider = ({ children }) => {
   const [seatUsage, setSeatUsage] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const loadWorkspaceFor = async (activeUser) => {
+  const loadWorkspaceFor = useCallback(async (activeUser) => {
     if (!activeUser) {
       setUser(null);
       setOrg(null);
@@ -40,7 +40,7 @@ export const AuthProvider = ({ children }) => {
     setOrg(orgData ?? null);
     setMembers(mergedMembers);
     setSeatUsage({ used, available });
-  };
+  }, []);
 
   useEffect(() => {
     const bootstrap = async () => {
@@ -59,9 +59,9 @@ export const AuthProvider = ({ children }) => {
       }
     };
     void bootstrap();
-  }, []);
+  }, [loadWorkspaceFor]);
 
-  const login = async ({ email, password }) => {
+  const login = useCallback(async ({ email, password }) => {
     const users = storage.get(LS_USERS, []);
     const found = users.find((u) => u.email?.toLowerCase() === email?.toLowerCase());
     if (!found) {
@@ -73,9 +73,9 @@ export const AuthProvider = ({ children }) => {
     storage.set(LS_CURRENT, found);
     await loadWorkspaceFor(found);
     return found;
-  };
+  }, [loadWorkspaceFor]);
 
-  const signup = async ({ name, email, password }) => {
+  const signup = useCallback(async ({ name, email, password }) => {
     if (!name || !email || !password) {
       throw new Error('Please provide name, email and password');
     }
@@ -106,19 +106,19 @@ export const AuthProvider = ({ children }) => {
     storage.set(LS_CURRENT, newUser);
     await loadWorkspaceFor(newUser);
     return newUser;
-  };
+  }, [loadWorkspaceFor]);
 
-  const logout = async () => {
+  const logout = useCallback(async () => {
     storage.remove(LS_CURRENT);
     setUser(null);
     setOrg(null);
     setMembers([]);
     setSeatUsage(null);
-  };
+  }, []);
 
   const value = useMemo(
     () => ({ user, org, members, seatUsage, loading, login, signup, logout }),
-    [user, org, members, seatUsage, loading],
+    [user, org, members, seatUsage, loading, login, signup, logout],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

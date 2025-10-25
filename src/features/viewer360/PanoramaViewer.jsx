@@ -72,7 +72,7 @@ export const PanoramaViewer = forwardRef(({ view, pins, panoramaUrl, onPinClick,
         setReady(true);
       },
     }),
-    [view.defaultYaw, view.defaultPitch],
+    [updatePinOverlays, view.defaultYaw, view.defaultPitch],
   );
 
   useEffect(() => {
@@ -169,6 +169,7 @@ export const PanoramaViewer = forwardRef(({ view, pins, panoramaUrl, onPinClick,
         tabIndex={0}
         role="application"
         aria-label="360 degree panorama viewer"
+        data-testid="panorama-viewer"
         onKeyDown={handleKeyDown}
       />
       {!ready && (
@@ -236,4 +237,3 @@ export const PanoramaViewer = forwardRef(({ view, pins, panoramaUrl, onPinClick,
 });
 
 PanoramaViewer.displayName = 'PanoramaViewer';
-
