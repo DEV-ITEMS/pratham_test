@@ -2,9 +2,8 @@ import DashboardIcon from '@mui/icons-material/Dashboard';
 import LayersIcon from '@mui/icons-material/Layers';
 import PublicIcon from '@mui/icons-material/Public';
 import WorkspacesIcon from '@mui/icons-material/Workspaces';
-import { Divider, Drawer, IconButton, List, ListItemButton, ListItemIcon, ListItemText, Stack, Typography, useMediaQuery, Toolbar } from '@mui/material';
+import { Divider, Drawer, IconButton, List, ListItemButton, ListItemIcon, ListItemText, Stack, Typography, Toolbar } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
-import { useTheme } from '@mui/material/styles';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../features/auth/useAuth';
 
@@ -14,8 +13,6 @@ export const AppNavDrawer = ({ open, onClose }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { org, seatUsage } = useAuth();
-  const theme = useTheme();
-  const mdUp = useMediaQuery(theme.breakpoints.up('md'));
 
   const items = [
     { icon: <DashboardIcon />, label: 'Dashboard', path: '/dashboard' },
@@ -26,14 +23,16 @@ export const AppNavDrawer = ({ open, onClose }) => {
 
   return (
     <Drawer
-      variant={mdUp ? 'persistent' : 'temporary'}
+      variant="temporary"
       open={open}
       onClose={onClose}
       ModalProps={{ keepMounted: true }}
       sx={{
-        width: APP_NAV_WIDTH,
-        flexShrink: 0,
-        '& .MuiDrawer-paper': { width: APP_NAV_WIDTH, boxSizing: 'border-box', borderRight: 0 },
+        '& .MuiDrawer-paper': {
+          width: APP_NAV_WIDTH,
+          boxSizing: 'border-box',
+          borderRight: 0,
+        },
       }}
     >
       {/* Offset for the fixed AppBar */}

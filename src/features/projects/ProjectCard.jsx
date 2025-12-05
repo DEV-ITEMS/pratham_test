@@ -16,7 +16,7 @@ const visibilityLabelMap = {
   INVITE_ONLY: 'Invite Only',
 };
 
-export const ProjectCard = ({ project, onOpen }) => {
+export const ProjectCard = ({ project, onOpen, ctaLabel = 'Open Editor' }) => {
   const lastUpdatedLabel = formatDistanceToNow(new Date(project.updatedAt), { addSuffix: true });
 
   return (
@@ -47,10 +47,9 @@ export const ProjectCard = ({ project, onOpen }) => {
       </CardContent>
       <CardActions sx={{ justifyContent: 'flex-end', p: 2 }}>
         <Button variant="contained" onClick={() => onOpen?.(project)}>
-          Open Editor
+          {ctaLabel}
         </Button>
       </CardActions>
     </Card>
   );
 };
-
