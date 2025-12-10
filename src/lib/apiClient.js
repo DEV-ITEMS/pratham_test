@@ -1,4 +1,4 @@
-const BASE_URL = 'http://localhost:4000';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:4000';
 
 class ApiError extends Error {
   constructor(message, status, payload) {
@@ -29,7 +29,7 @@ const buildQueryString = (query) => {
 };
 
 const request = async (path, { method = 'GET', body, token, query } = {}) => {
-  const url = new URL(path, BASE_URL);
+  const url = new URL(path, API_BASE_URL);
   const search = buildQueryString(query);
   if (search) {
     url.search = search;
