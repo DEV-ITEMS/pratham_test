@@ -16,6 +16,7 @@ import { useSceneNavigator } from '../../lib/hooks/useSceneNavigator';
 import { spacing } from '../../theme/spacing';
 import { ViewerHudRibbon } from '../../components/ViewerHudRibbon';
 import { createWatermarkedSnapshot, triggerDownload } from '../../lib/utils/snapshot';
+import { useAuth } from '../auth/useAuth';
 
 const HUD_TABS = [
   { id: 'details', label: 'Details', icon: <InfoOutlinedIcon fontSize="small" /> },
@@ -26,6 +27,7 @@ const HUD_TABS = [
 
 export const PublicProjectViewer = () => {
   const { projectSlug = '' } = useParams();
+  const { token } = useAuth();
   const viewerRef = useRef(null);
   const [orientation, setOrientation] = useState({ yaw: 0, pitch: 0 });
   const [hudTab, setHudTab] = useState(null);
@@ -36,12 +38,12 @@ export const PublicProjectViewer = () => {
   });
 
   const project = projectQuery.data;
-  const scene = useSceneNavigator(project?.id);
+  const scene = useSceneNavigator(project?.id, token);
 
   const analyticsQuery = useQuery({
-    queryKey: ['public-analytics', project?.id],
-    queryFn: () => (project ? apiClient.fetchAnalytics(project.id) : Promise.resolve(undefined)),
-    enabled: Boolean(project?.id),
+    queryKey: ['public-analytics', project?.id, token],
+    queryFn: () => (project && token ? apiClient.fetchAnalytics(project.id, { token }) : Promise.resolve(undefined)),
+    enabled: Boolean(project?.id && token),
   });
 
   const shareUrl = useMemo(() => `${window.location.origin}/p/${projectSlug}`, [projectSlug]);

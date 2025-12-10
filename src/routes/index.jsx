@@ -67,7 +67,7 @@ export const AppRoutes = () => (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route element={<AppLayout />}>
-        <Route index element={<Navigate to="/editor/modern-flat-tour" replace />} />
+        <Route index element={<Navigate to="/dashboard" replace />} />
         <Route
           path="dashboard"
           element={

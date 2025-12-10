@@ -67,7 +67,7 @@ const ScrollStrip = ({ label, items, selectedId, onSelect, emptyLabel }) => (
 
 const EditorShellPage = () => {
   const { projectSlug = '' } = useParams();
-  const { org } = useAuth();
+  const { org, token } = useAuth();
   const viewerRef = useRef(null);
   const [selectedBuildingId, setSelectedBuildingId] = useState(null);
   const [selectedFlatId, setSelectedFlatId] = useState(null);
@@ -84,6 +84,12 @@ const EditorShellPage = () => {
   const [snapshotting, setSnapshotting] = useState(false);
   const [hudTab, setHudTab] = useState(null);
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
+  const formatRelative = (value) => {
+    if (!value) return 'Unknown';
+    const date = new Date(value);
+    if (Number.isNaN(date?.getTime?.())) return 'Unknown';
+    return formatDistanceToNow(date, { addSuffix: true });
+  };
 
   useEffect(() => () => {
     blobUrls.forEach((u) => {
@@ -96,34 +102,35 @@ const EditorShellPage = () => {
   }, [blobUrls]);
 
   const projectQuery = useQuery({
-    queryKey: ['project', projectSlug],
-    queryFn: () => apiClient.fetchProjectBySlug(projectSlug),
+    queryKey: ['project', projectSlug, token],
+    queryFn: () => (token ? apiClient.fetchProjectBySlug(projectSlug, { token }) : Promise.resolve(undefined)),
+    enabled: Boolean(token),
   });
 
   const project = projectQuery.data;
 
   const hierarchyQuery = useQuery({
-    queryKey: ['hierarchy', project?.id],
-    queryFn: () => (project ? apiClient.fetchProjectHierarchy(project.id) : Promise.resolve(undefined)),
-    enabled: Boolean(project?.id),
+    queryKey: ['hierarchy', project?.id, token],
+    queryFn: () => (project && token ? apiClient.fetchProjectHierarchy(project.id, { token }) : Promise.resolve(undefined)),
+    enabled: Boolean(project?.id && token),
   });
 
   const initialSelectionQuery = useQuery({
-    queryKey: ['initial-selection', project?.id],
-    queryFn: () => (project ? apiClient.fetchInitialSelection(project.id) : Promise.resolve(null)),
-    enabled: Boolean(project?.id),
+    queryKey: ['initial-selection', project?.id, token],
+    queryFn: () => (project && token ? apiClient.fetchInitialSelection(project.id, { token }) : Promise.resolve(null)),
+    enabled: Boolean(project?.id && token),
   });
 
   const sharingQuery = useQuery({
-    queryKey: ['sharing', project?.id],
-    queryFn: () => (project ? apiClient.fetchSharing(project.id) : Promise.resolve(undefined)),
-    enabled: Boolean(project?.id),
+    queryKey: ['sharing', project?.id, token],
+    queryFn: () => (project && token ? apiClient.fetchSharing(project.id, { token }) : Promise.resolve(undefined)),
+    enabled: Boolean(project?.id && token),
   });
 
   const analyticsQuery = useQuery({
-    queryKey: ['analytics', project?.id],
-    queryFn: () => (project ? apiClient.fetchAnalytics(project.id) : Promise.resolve(undefined)),
-    enabled: Boolean(project?.id),
+    queryKey: ['analytics', project?.id, token],
+    queryFn: () => (project && token ? apiClient.fetchAnalytics(project.id, { token }) : Promise.resolve(undefined)),
+    enabled: Boolean(project?.id && token),
   });
 
   useEffect(() => {
@@ -171,15 +178,15 @@ const EditorShellPage = () => {
   const currentView = useMemo(() => roomViews.find((view) => view.id === selectedViewId) ?? roomViews[0] ?? null, [roomViews, selectedViewId]);
 
   const pinsQuery = useQuery({
-    queryKey: ['pins', currentView?.id],
-    queryFn: () => (currentView ? apiClient.fetchPinsForView(currentView.id) : Promise.resolve([])),
-    enabled: Boolean(currentView?.id),
+    queryKey: ['pins', currentView?.id, token],
+    queryFn: () => (currentView && token ? apiClient.fetchPinsForView(currentView.id, { token }) : Promise.resolve([])),
+    enabled: Boolean(currentView?.id && token),
   });
 
   const panoramaAssetQuery = useQuery({
-    queryKey: ['asset', currentView?.panoramaAssetId],
-    queryFn: () => (currentView ? apiClient.fetchPanoramaAsset(currentView.panoramaAssetId) : Promise.resolve(undefined)),
-    enabled: Boolean(currentView?.panoramaAssetId),
+    queryKey: ['asset', currentView?.panoramaAssetId, token],
+    queryFn: () => (currentView && token ? apiClient.fetchPanoramaAsset(currentView.panoramaAssetId, { token }) : Promise.resolve(undefined)),
+    enabled: Boolean(currentView?.panoramaAssetId && token),
   });
 
   const uploadedAsset = currentView ? uploadedAssetsById[currentView.panoramaAssetId] : undefined;
@@ -242,7 +249,9 @@ const EditorShellPage = () => {
     const watermark = `${org?.name ?? 'Demo Interiors'} - ${project.name}`;
     const dataUrl = await createWatermarkedSnapshot(canvas, { watermark, strategy: 'BOTTOM_RIGHT' });
     triggerDownload(dataUrl, `${project.slug}-snapshot.png`);
-    await apiClient.recordSnapshot(project.id);
+    if (token) {
+      await apiClient.recordSnapshot(project.id, { token });
+    }
     void analyticsQuery.refetch();
     setSnackbar({ open: true, message: 'Snapshot saved to your device', action: null });
     setSnapshotting(false);
@@ -285,7 +294,7 @@ const EditorShellPage = () => {
               share={sharingQuery.data}
               onChange={async (payload) => {
                 const prev = sharingQuery.data;
-                await apiClient.updateSharing(project.id, payload);
+                await apiClient.updateSharing(project.id, payload, { token });
                 void sharingQuery.refetch();
                 setSnackbar({
                   open: true,
@@ -295,7 +304,7 @@ const EditorShellPage = () => {
                       color="inherit"
                       size="small"
                       onClick={async () => {
-                        await apiClient.updateSharing(project.id, { restriction: prev.restriction });
+                        await apiClient.updateSharing(project.id, { restriction: prev.restriction }, { token });
                         void sharingQuery.refetch();
                         setSnackbar({ open: true, message: 'Reverted sharing change', action: null });
                       }}
@@ -336,7 +345,7 @@ const EditorShellPage = () => {
           <Stack direction="row" spacing={`${spacing.sm}px`} flexWrap="wrap">
             <Chip label={`Views ${analyticsQuery.data.totalViews}`} />
             <Chip label={`Snapshots ${analyticsQuery.data.snapshotsDownloaded}`} />
-            <Chip label={`Last viewed ${formatDistanceToNow(new Date(analyticsQuery.data.lastViewedAt), { addSuffix: true })}`} />
+            <Chip label={`Last viewed ${formatRelative(analyticsQuery.data.lastViewedAt)}`} />
           </Stack>
         ) : (
           <Typography variant="body2" color="text.secondary">
@@ -407,7 +416,7 @@ const EditorShellPage = () => {
           </Typography>
         </Box>
         <Stack direction="row" spacing={`${spacing.xs}px`} flexWrap="wrap">
-          <Chip size="small" label={`Updated ${formatDistanceToNow(new Date(project.updatedAt), { addSuffix: true })}`} />
+          <Chip size="small" label={`Updated ${formatRelative(project.updatedAt)}`} />
           <Chip size="small" label={`Views ${analyticsQuery.data?.totalViews ?? 0}`} />
           <Chip size="small" label={project.visibility} />
         </Stack>
@@ -513,7 +522,7 @@ const EditorShellPage = () => {
           project={project}
           share={sharingQuery.data}
           onChange={async (payload) => {
-            await apiClient.updateSharing(project.id, payload);
+            await apiClient.updateSharing(project.id, payload, { token });
             void sharingQuery.refetch();
           }}
         />

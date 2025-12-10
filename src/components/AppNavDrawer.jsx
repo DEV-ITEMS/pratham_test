@@ -16,9 +16,9 @@ export const AppNavDrawer = ({ open, onClose }) => {
 
   const items = [
     { icon: <DashboardIcon />, label: 'Dashboard', path: '/dashboard' },
-    { icon: <LayersIcon />, label: 'Modern Flat Editor', path: '/editor/modern-flat-tour' },
-    { icon: <WorkspacesIcon />, label: 'Portfolio', path: `/portfolio/${org?.slug ?? 'demo-interiors'}` },
-    { icon: <PublicIcon />, label: 'Public Viewer', path: '/p/modern-flat-tour' },
+    { icon: <LayersIcon />, label: 'Editor', path: '/dashboard' },
+    { icon: <WorkspacesIcon />, label: 'Portfolio', path: org?.slug ? `/portfolio/${org.slug}` : '/dashboard' },
+    { icon: <PublicIcon />, label: 'Public Viewer', path: '/dashboard' },
   ];
 
   return (

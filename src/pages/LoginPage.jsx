@@ -103,7 +103,7 @@ const LoginPage = () => {
             <SignupForm onSubmit={handleSignup} error={error} loading={submitting} />
           )}
           <Typography variant="caption" color="text.secondary" textAlign="center">
-            Frontend-only auth; data persists in your browser.
+            Auth connects to the backend; keep your token safe.
           </Typography>
         </Stack>
       </Paper>

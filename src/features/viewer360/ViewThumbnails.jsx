@@ -2,11 +2,11 @@ import { Box, Avatar, Stack, Tooltip } from '@mui/material';
 import { useQueries } from '@tanstack/react-query';
 import { apiClient } from '../../lib/apiClient';
 
-export const ViewThumbnails = ({ views, selectedViewId, onSelect }) => {
+export const ViewThumbnails = ({ views, selectedViewId, onSelect, token }) => {
   const queries = useQueries({
     queries: (views ?? []).map((v) => ({
-      queryKey: ['thumb', v.panoramaAssetId],
-      queryFn: () => apiClient.fetchPanoramaAsset(v.panoramaAssetId),
+      queryKey: ['thumb', v.panoramaAssetId, token],
+      queryFn: () => (v.panoramaAssetId ? apiClient.fetchPanoramaAsset(v.panoramaAssetId, { token }) : Promise.resolve(undefined)),
       enabled: Boolean(v.panoramaAssetId),
     })),
   });

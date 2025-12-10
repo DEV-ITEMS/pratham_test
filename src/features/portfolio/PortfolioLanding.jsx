@@ -17,6 +17,7 @@ import { formatYawPitch } from '../../lib/utils/yawPitch';
 import { spacing } from '../../theme/spacing';
 import { ViewerHudRibbon } from '../../components/ViewerHudRibbon';
 import { createWatermarkedSnapshot, triggerDownload } from '../../lib/utils/snapshot';
+import { useAuth } from '../auth/useAuth';
 
 const HUD_TABS = [
   { id: 'details', label: 'Details', icon: <InfoOutlinedIcon fontSize="small" /> },
@@ -27,23 +28,27 @@ const HUD_TABS = [
 
 export const PortfolioLanding = () => {
   const { orgSlug = '' } = useParams();
+  const { token } = useAuth();
   const [selectedProjectId, setSelectedProjectId] = useState(null);
   const [orientation, setOrientation] = useState({ yaw: 0, pitch: 0 });
   const viewerRef = useRef(null);
   const [hudTab, setHudTab] = useState(null);
 
   const orgQuery = useQuery({
-    queryKey: ['org', orgSlug],
-    queryFn: () => apiClient.fetchOrgBySlug(orgSlug),
+    queryKey: ['org', orgSlug, token],
+    queryFn: () => (token ? apiClient.fetchOrgBySlug(orgSlug, { token }) : Promise.resolve(null)),
+    enabled: Boolean(token),
   });
 
   const portfolioQuery = useQuery({
-    queryKey: ['portfolio', orgSlug],
+    queryKey: ['portfolio', orgSlug, token],
     queryFn: async () => {
-      const org = await apiClient.fetchOrgBySlug(orgSlug);
+      if (!token) return [];
+      const org = await apiClient.fetchOrgBySlug(orgSlug, { token });
       if (!org) return [];
-      return apiClient.fetchPortfolioProjects(org.id);
+      return apiClient.fetchPortfolioProjects(org.id, { token });
     },
+    enabled: Boolean(token),
   });
 
   const projects = useMemo(() => portfolioQuery.data ?? [], [portfolioQuery.data]);
@@ -55,7 +60,7 @@ export const PortfolioLanding = () => {
   }, [projects, selectedProjectId]);
 
   const selectedProject = useMemo(() => projects.find((p) => p.id === selectedProjectId) ?? projects[0] ?? null, [projects, selectedProjectId]);
-  const scene = useSceneNavigator(selectedProject?.id);
+  const scene = useSceneNavigator(selectedProject?.id, token);
 
   const copyShareLink = async () => {
     if (!selectedProject) return;

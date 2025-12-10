@@ -17,7 +17,11 @@ const visibilityLabelMap = {
 };
 
 export const ProjectCard = ({ project, onOpen, ctaLabel = 'Open Editor' }) => {
-  const lastUpdatedLabel = formatDistanceToNow(new Date(project.updatedAt), { addSuffix: true });
+  const updatedAt = project?.updatedAt ? new Date(project.updatedAt) : null;
+  const hasValidDate = updatedAt instanceof Date && !Number.isNaN(updatedAt?.getTime?.());
+  const lastUpdatedLabel = hasValidDate ? formatDistanceToNow(updatedAt, { addSuffix: true }) : 'Unknown';
+  const tags = Array.isArray(project?.tags) ? project.tags : [];
+  const visibility = project?.visibility ?? 'PRIVATE';
 
   return (
     <Card variant="outlined" sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
@@ -26,8 +30,8 @@ export const ProjectCard = ({ project, onOpen, ctaLabel = 'Open Editor' }) => {
           <Stack direction="row" spacing={1} alignItems="center">
             <Chip
               size="small"
-              icon={visibilityIconMap[project.visibility]}
-              label={visibilityLabelMap[project.visibility]}
+              icon={visibilityIconMap[visibility]}
+              label={visibilityLabelMap[visibility] ?? visibility}
             />
             {project.portfolio && <Chip size="small" color="primary" label="Portfolio" />}
           </Stack>
@@ -36,7 +40,7 @@ export const ProjectCard = ({ project, onOpen, ctaLabel = 'Open Editor' }) => {
             {project.description}
           </Typography>
           <Stack direction="row" spacing={1} flexWrap="wrap">
-            {project.tags.map((tag) => (
+            {tags.map((tag) => (
               <Chip key={tag} size="small" variant="outlined" label={tag} />
             ))}
           </Stack>

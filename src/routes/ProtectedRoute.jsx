@@ -3,7 +3,7 @@ import { Box, CircularProgress } from '@mui/material';
 import { useAuth } from '../features/auth/useAuth';
 
 export const ProtectedRoute = ({ children }) => {
-  const { user, loading } = useAuth();
+  const { user, token, loading } = useAuth();
   const location = useLocation();
 
   if (loading) {
@@ -14,7 +14,7 @@ export const ProtectedRoute = ({ children }) => {
     );
   }
 
-  if (!user) {
+  if (!user || !token) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 

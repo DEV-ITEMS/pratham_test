@@ -9,25 +9,24 @@ import { useAuth } from '../features/auth/useAuth';
 // Simple global search across projects. Can be expanded to rooms/views.
 export const GlobalSearch = () => {
   const navigate = useNavigate();
-  const { org } = useAuth();
+  const { org, token } = useAuth();
   const [value, setValue] = useState(null);
 
   const projectsQuery = useQuery({
-    queryKey: ['projects', org?.id],
-    queryFn: () => (org ? apiClient.fetchProjects(org.id) : Promise.resolve([])),
-    enabled: Boolean(org?.id),
+    queryKey: ['projects', org?.id, token],
+    queryFn: () => (org && token ? apiClient.fetchProjects(org.id, { token }) : Promise.resolve([])),
+    enabled: Boolean(org?.id && token),
   });
 
-  const options = useMemo(
-    () =>
-      (projectsQuery.data ?? []).map((p) => ({
-        type: 'project',
-        id: p.id,
-        label: p.name,
-        slug: p.slug,
-      })),
-    [projectsQuery.data],
-  );
+  const options = useMemo(() => {
+    const items = Array.isArray(projectsQuery.data) ? projectsQuery.data : Array.isArray(projectsQuery.data?.items) ? projectsQuery.data.items : [];
+    return items.map((p) => ({
+      type: 'project',
+      id: p.id,
+      label: p.name,
+      slug: p.slug,
+    }));
+  }, [projectsQuery.data]);
 
   return (
     <Box sx={{ minWidth: { xs: 180, sm: 260, md: 360 } }}>

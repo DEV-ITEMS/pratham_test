@@ -2,10 +2,10 @@ import { useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '../apiClient';
 
-export const useSceneNavigator = (projectId) => {
+export const useSceneNavigator = (projectId, token) => {
   const hierarchyQuery = useQuery({
-    queryKey: ['scene-hierarchy', projectId],
-    queryFn: () => (projectId ? apiClient.fetchProjectHierarchy(projectId) : Promise.resolve(undefined)),
+    queryKey: ['scene-hierarchy', projectId, token],
+    queryFn: () => (projectId ? apiClient.fetchProjectHierarchy(projectId, { token }) : Promise.resolve(undefined)),
     enabled: Boolean(projectId),
   });
 
@@ -52,14 +52,14 @@ export const useSceneNavigator = (projectId) => {
   const selectView = (viewId) => setSelectedViewId(viewId);
 
   const pinsQuery = useQuery({
-    queryKey: ['scene-pins', selectedView?.id],
-    queryFn: () => (selectedView ? apiClient.fetchPinsForView(selectedView.id) : Promise.resolve([])),
+    queryKey: ['scene-pins', selectedView?.id, token],
+    queryFn: () => (selectedView ? apiClient.fetchPinsForView(selectedView.id, { token }) : Promise.resolve([])),
     enabled: Boolean(selectedView?.id),
   });
 
   const assetQuery = useQuery({
-    queryKey: ['scene-asset', selectedView?.panoramaAssetId],
-    queryFn: () => (selectedView ? apiClient.fetchPanoramaAsset(selectedView.panoramaAssetId) : Promise.resolve(undefined)),
+    queryKey: ['scene-asset', selectedView?.panoramaAssetId, token],
+    queryFn: () => (selectedView ? apiClient.fetchPanoramaAsset(selectedView.panoramaAssetId, { token }) : Promise.resolve(undefined)),
     enabled: Boolean(selectedView?.panoramaAssetId),
   });
 
