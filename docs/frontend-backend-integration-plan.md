@@ -65,6 +65,50 @@ Goal: connect the existing React/Vite frontend to the Fastify/Prisma/Supabase ba
 - File touchpoints: pages/EditorShellPage.jsx, features/sharing/ShareDialog.jsx, ShareSettingsPanel.jsx, pages/DashboardPage.jsx, features/viewer360/PublicProjectViewer.jsx.
 - Backend deps: `/share-links`, `/analytics/summary`, `/analytics/events`.
 
+## Phase 6: Project Creation UI on Dashboard
+
+### UX / UI Design
+- Entry point on Dashboard: add a primary “New Project” trigger (button in the header or a “+ New Project” card at the start of the projects grid). If no projects, show a prominent empty-state CTA.
+- Flow:
+  - Click “New Project” → open modal/side sheet form.
+  - Form fields (per POST /projects in backend-api.md):
+    - `name` (text, required)
+    - `description` (multiline, optional)
+    - `visibility` (select: PUBLIC | INVITE_ONLY | PRIVATE; default PRIVATE)
+    - `portfolio` (boolean switch; default false)
+    - `tags` (optional array; chips/comma-separated)
+    - Slug is auto-generated server-side; optionally show an editable slug preview generated from name (client-side), but final source of truth is backend.
+  - Buttons: Primary “Create project”, Secondary “Cancel”.
+  - Submit UX: disable button + show progress.
+  - Success: close dialog, refetch/invalidate projects query so the new project appears; navigation to `/editor/:slug` can be a later enhancement.
+  - Errors: show inline field errors for 4xx if mappable (e.g., slug conflict), otherwise generic “Unable to create project.”
+
+### Technical Tasks
+- apiClient (`src/lib/apiClient.js`):
+  - Add `createProject(payload, { token })` → POST `/projects` with JSON body. Payload fields: `name`, `description?`, `visibility?`, `portfolio?`, `tags?` per backend docs. Include Authorization header. Surface errors with status/message/details.
+- Dashboard (`src/pages/DashboardPage.jsx`):
+  - Add “New Project” UI trigger.
+  - Add creation form (inline or in new component) using React Query `useMutation(createProject)` with token from `useAuth()`.
+  - On success: invalidate/refetch `['projects', org.id, token]`.
+  - Empty state CTA for zero projects to open the form.
+- New component (optional) `src/features/projects/CreateProjectDialog.jsx`:
+  - `react-hook-form` + `zod` for client validation.
+  - Props: `open`, `onClose`, `onCreated(project)`.
+  - Fields as above; map backend 409/422 to form errors when possible.
+- Auth/roles:
+  - Use `token` from `useAuth()`.
+  - Optionally gate the button to ADMIN/EDITOR roles if available in `user.role`; otherwise leave visible to all authenticated users for now.
+
+### Edge Cases & Validation
+- Slug/unique conflicts (409): show “A project with this slug already exists. Try a different slug.” Consider offering a regenerated suggestion (e.g., append “-2”) as a follow-up enhancement.
+- Validation errors (422): map backend messages to fields when possible; otherwise show a top-level error.
+- No token: Dashboard is protected via `ProtectedRoute`, so creation UI is not shown when unauthenticated.
+- Network errors: keep dialog open and show retry-friendly message; allow resubmit.
+
+### Dependencies / Sequencing
+- Depends on: Phase 1 (auth + org + projects list) being in place so token/org/project list exist.
+- Independent of: hierarchy, public viewer, uploads, share-links, analytics.
+
 ## 6) Open Questions / Backend Gaps
 - Org slug lookup: No `/org/by-slug` in frontend; `fetchOrgBySlug` just checks current org. Do we need a public/org-scoped slug lookup endpoint?
 - Projects by slug: Is `/projects/:slug` implemented? If not, should frontend use `/projects?slug=` or backend add the route?

@@ -221,4 +221,14 @@ export const apiClient = {
       body: { projectId, viewId, type: 'SNAPSHOT' },
     });
   },
+
+  // Projects (create)
+  async createProject(payload, options) {
+    const { token } = normalizeOptions(options);
+    return request('/projects', {
+      method: 'POST',
+      token,
+      body: payload,
+    });
+  },
 };

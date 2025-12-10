@@ -1,16 +1,20 @@
-import { Box, Chip, Paper, Skeleton, Stack, Tab, Tabs, Typography } from '@mui/material';
+import { Box, Button, Chip, Paper, Skeleton, Stack, Tab, Tabs, Typography } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 import { useAuth } from '../features/auth/useAuth';
 import { apiClient } from '../lib/apiClient';
 import { ProjectCard } from '../features/projects/ProjectCard';
+import { CreateProjectDialog } from '../features/projects/CreateProjectDialog';
 import { spacing } from '../theme/spacing';
 
 const DashboardPage = () => {
   const { org, seatUsage, token } = useAuth();
   const navigate = useNavigate();
   const [panel, setPanel] = useState('projects');
+  const [createOpen, setCreateOpen] = useState(false);
+  const [createError, setCreateError] = useState('');
+  const queryClient = useQueryClient();
 
   const { data: projectsResult, isLoading } = useQuery({
     queryKey: ['projects', org?.id, token],
@@ -23,6 +27,19 @@ const DashboardPage = () => {
     if (Array.isArray(projectsResult)) return projectsResult;
     return Array.isArray(projectsResult.items) ? projectsResult.items : [];
   }, [projectsResult]);
+
+  const createMutation = useMutation({
+    mutationFn: (payload) => apiClient.createProject(payload, { token }),
+    onSuccess: () => {
+      setCreateOpen(false);
+      setCreateError('');
+      queryClient.invalidateQueries({ queryKey: ['projects', org?.id, token] });
+    },
+    onError: (error) => {
+      const message = error?.message || 'Unable to create project';
+      setCreateError(message);
+    },
+  });
 
   const renderProjects = () => {
     if (isLoading) {
@@ -38,10 +55,17 @@ const DashboardPage = () => {
     if (!projects.length) {
       return (
         <Paper elevation={0} sx={{ p: `${spacing.md}px`, borderRadius: `${spacing.lg}px` }}>
-          <Typography variant="subtitle1">No projects yet</Typography>
-          <Typography variant="body2" color="text.secondary">
-            Use the backend (POST /projects) or admin tools to create your first project. It will appear here automatically.
-          </Typography>
+          <Stack spacing={`${spacing.sm}px`}>
+            <Typography variant="subtitle1">No projects yet</Typography>
+            <Typography variant="body2" color="text.secondary">
+              Create your first project to get started.
+            </Typography>
+            <Box>
+              <Button variant="contained" onClick={() => setCreateOpen(true)} disabled={!token}>
+                Create your first project
+              </Button>
+            </Box>
+          </Stack>
         </Paper>
       );
     }
@@ -72,7 +96,12 @@ const DashboardPage = () => {
             Connect to your organization and list available projects from the backend.
           </Typography>
         </Box>
-        {org && <Chip size="small" label={org.name} />}
+        <Stack direction="row" spacing={`${spacing.sm}px`} alignItems="center">
+          {org && <Chip size="small" label={org.name} />}
+          <Button variant="contained" onClick={() => setCreateOpen(true)} disabled={!token}>
+            New Project
+          </Button>
+        </Stack>
       </Stack>
 
       <Paper elevation={0} sx={{ borderRadius: `${spacing.lg}px`, p: `${spacing.md}px` }}>
@@ -99,6 +128,19 @@ const DashboardPage = () => {
           </Stack>
         )}
       </Paper>
+
+      <CreateProjectDialog
+        open={createOpen}
+        onClose={() => {
+          if (!createMutation.isPending) {
+            setCreateOpen(false);
+            setCreateError('');
+          }
+        }}
+        onSubmit={(payload) => createMutation.mutate(payload)}
+        isSubmitting={createMutation.isPending}
+        errorMessage={createError}
+      />
     </Box>
   );
 };
